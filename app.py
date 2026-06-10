@@ -139,3 +139,108 @@ def find_gluten_keywords(text: str):
                 seen.add(label)
                 hits.append(label)
     return hits
+
+# ============ DIYABET / SEKER ANALIZI ============
+
+SUGAR_LOW = 5.0
+SUGAR_HIGH = 22.5
+
+SUGAR_FREE_PHRASES = [
+    "sugar free", "sugar-free", "sugarfree",
+    "no added sugar", "no sugar added", "without added sugar",
+    "zero sugar", "0 sugar",
+    "sekersiz", "şekersiz",
+    "seker ilavesiz", "şeker ilavesiz",
+    "seker icermez", "şeker içermez",
+    "ilave seker icermez", "ilave şeker içermez",
+    "dusuk sekerli", "düşük şekerli",
+    "diyabetik", "diyabetiklere uygun",
+    "diabetic", "diabetic friendly",
+]
+
+SUGAR_KEYWORDS = {
+    "sugar": "sugar",
+    "seker": "şeker",
+    "şeker": "şeker",
+    "glucose": "glikoz",
+    "glikoz": "glikoz",
+    "fructose": "fruktoz",
+    "fruktoz": "fruktoz",
+    "sucrose": "sükroz",
+    "sukroz": "sükroz",
+    "sükroz": "sükroz",
+    "dextrose": "dekstroz",
+    "dekstroz": "dekstroz",
+    "maltose": "maltoz",
+    "maltoz": "maltoz",
+    "maltodextrin": "maltodekstrin",
+    "maltodekstrin": "maltodekstrin",
+    "corn syrup": "mısır şurubu",
+    "misir surubu": "mısır şurubu",
+    "mısır şurubu": "mısır şurubu",
+    "high fructose corn syrup": "yüksek fruktozlu mısır şurubu (HFCS)",
+    "hfcs": "yüksek fruktozlu mısır şurubu (HFCS)",
+    "glucose syrup": "glikoz şurubu",
+    "glikoz surubu": "glikoz şurubu",
+    "glikoz şurubu": "glikoz şurubu",
+    "nisasta surubu": "nişasta şurubu",
+    "nişasta şurubu": "nişasta şurubu",
+    "honey": "bal",
+    "bal": "bal",
+    "molasses": "pekmez/melas",
+    "pekmez": "pekmez",
+    "agave": "agave",
+    "caramel": "karamel",
+    "karamel": "karamel",
+}
+
+def find_sugar_free_claim(text: str) -> bool:
+    norm = normalize_for_search(text)
+    for phrase in SUGAR_FREE_PHRASES:
+        p_norm = normalize_for_search(phrase).strip()
+        if f" {p_norm} " in norm:
+            return True
+    return False
+
+
+def find_sugar_keywords(text: str):
+    norm = normalize_for_search(text)
+
+    for phrase in SUGAR_FREE_PHRASES:
+        p_norm = normalize_for_search(phrase).strip()
+        norm = norm.replace(f" {p_norm} ", "  ")
+
+    hits = []
+    seen = set()
+
+    for kw, label in SUGAR_KEYWORDS.items():
+        kw_norm = normalize_for_search(kw).strip()
+        pattern = rf"(?<![a-z0-9]){re.escape(kw_norm)}(?![a-z0-9])"
+
+        if re.search(pattern, norm):
+            if label not in seen:
+                seen.add(label)
+                hits.append(label)
+
+    return hits
+
+
+def extract_sugar_grams(text: str):
+    norm = _tr_to_ascii(text).lower()
+
+    patterns = [
+        r"of\s*which\s*sugars?\s*[:\-]?\s*(\d+[.,]?\d*)\s*g",
+        r"bunlardan\s*sekerler?\s*[:\-]?\s*(\d+[.,]?\d*)\s*g",
+        r"sekerler?\s*[:\-]?\s*(\d+[.,]?\d*)\s*g",
+        r"sugars?\s*[:\-]?\s*(\d+[.,]?\d*)\s*g",
+    ]
+
+    for pat in patterns:
+        m = re.search(pat, norm)
+        if m:
+            try:
+                return float(m.group(1).replace(",", "."))
+            except ValueError:
+                pass
+
+    return None

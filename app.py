@@ -9,3 +9,10 @@ diabetes_model = joblib.load("diyabet_model.pkl")
 @app.get("/")
 def home():
     return {"message": "API calisiyor"}
+
+@app.get("/test")
+def test():
+    return {
+        "celiac_model": "loaded",
+        "diabetes_model": "loaded"
+    }

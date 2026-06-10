@@ -244,3 +244,56 @@ def extract_sugar_grams(text: str):
                 pass
 
     return None
+
+def predict_diabetes(ocr_text: str, model):
+    clean_input = clean_text(ocr_text)
+
+    if not clean_input:
+        return {
+            "sonuc": "BILINMIYOR",
+            "aciklama": "Gorselden okunabilir yazi tespit edilemedi.",
+            "bulunanlar": []
+        }
+
+    sugar_g = extract_sugar_grams(ocr_text)
+    is_sf_claim = find_sugar_free_claim(ocr_text)
+    sugar_hits = find_sugar_keywords(ocr_text)
+
+    model_pred = int(model.predict([clean_input])[0])
+    model_proba = model.predict_proba([clean_input])[0]
+
+    if sugar_g is not None:
+        if sugar_g < SUGAR_LOW:
+            seviye = "DUSUK"
+        elif sugar_g <= SUGAR_HIGH:
+            seviye = "ORTA"
+        else:
+            seviye = "YUKSEK"
+
+        aciklama = f"Besin degerleri tablosundan 100 g basina yaklasik {sugar_g:g} g seker tespit edildi."
+
+    elif is_sf_claim and not sugar_hits:
+        seviye = "DUSUK"
+        aciklama = "Etikette sekersiz / sugar free ifadesi var ve ilave seker kaynagi gorulmedi."
+
+    elif sugar_hits:
+        if len(sugar_hits) >= 2 or model_pred == 1:
+            seviye = "YUKSEK"
+        else:
+            seviye = "ORTA"
+
+        aciklama = f"Tespit edilen seker kaynaklari: {', '.join(sugar_hits)}"
+
+    else:
+        if model_pred == 1:
+            seviye = "ORTA"
+            aciklama = "Anahtar kelime bulunamadi ancak model yuksek sekerli urun kalibi tespit etti."
+        else:
+            seviye = "DUSUK"
+            aciklama = "Belirgin seker kaynagi tespit edilmedi, model yuksek risk gormuyor."
+
+    return {
+        "sonuc": seviye,
+        "aciklama": aciklama,
+        "bulunanlar": sugar_hits
+    }

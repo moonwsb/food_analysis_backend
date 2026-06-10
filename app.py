@@ -298,6 +298,7 @@ def predict_diabetes(ocr_text: str, model):
         "bulunanlar": sugar_hits
     }
 
+# ============ HIBRIT KARAR ============
 def predict_hybrid(ocr_text: str, model: Pipeline) -> None:
     """Once kural, sonra modeli birlestiren hibrit karar."""
     clean_input = clean_text(ocr_text)
@@ -346,3 +347,25 @@ def predict_hybrid(ocr_text: str, model: Pipeline) -> None:
         risk_pct = max(model_proba[1] * 100, 95.0 if rule_says_risky else 0.0)
     else:
         risk_pct = (1 - model_proba[0]) * 100  # bilgi amacli
+
+    # ----- CIKTI -----
+    print("\n========== SONUC (COLYAK / GLUTEN) ==========")
+    if final_label == 1:
+        print("⚠️  COLYAK HASTALARI ICIN RISKLI  (gluten tespit edildi)")
+    else:
+        print("✅ COLYAK HASTALARI ICIN GUVENLI gozukuyor  (gluten tespit edilmedi)")
+    print(f"\nAciklama : {reason}")
+    print(f"Model tahmini   : {'RISKLI' if model_pred==1 else 'GUVENLI'} "
+          f"(risk %{model_proba[1]*100:.1f} / guven %{model_proba[0]*100:.1f})")
+    print(f"Kural tespiti   : "
+          f"{'gluten kaynagi VAR -> ' + ', '.join(keyword_hits) if rule_says_risky else 'gluten kaynagi yok'}"
+          f"{'  |  GLUTENSIZ ibaresi var' if is_gf_claim else ''}")
+    print("=============================================")
+    print("\nNot: Bu tahmin bir on-degerlendirmedir. Colyak hastalari icin kesin")
+    print("karar etiketin TAM ve OKUNAKLI hali ile, gerekirse uretici/diyetisyene")
+    print("danisarak verilmelidir. OCR hatalari yanlis sonuca yol acabilir.")
+    return {
+    "sonuc": "RISKLI" if final_label == 1 else "GUVENLI",
+    "aciklama": reason,
+    "bulunanlar": keyword_hits
+}

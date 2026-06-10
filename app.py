@@ -16,3 +16,6 @@ def test():
         "celiac_model": "loaded",
         "diabetes_model": "loaded"
     }
+@app.get("/predict")
+def predict_test():
+    return {"status": "working"}

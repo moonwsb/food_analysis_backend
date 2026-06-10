@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+from PIL import Image
 import joblib
+import sys
+import easyocr
 
 app = FastAPI()
 
@@ -21,5 +24,21 @@ def predict_test():
     return {"status": "working"}
 @app.get("/ocr-test")
 def ocr_test():
-    import easyocr
+
     return {"easyocr": "import edildi"}
+
+def extract_text_from_image(image_path: str) -> str:
+    try:
+        with Image.open(image_path) as im:
+            im.verify()
+    except Exception as e:
+        sys.exit(
+            f"HATA: '{image_path}' acilabilir bir gorsel degil ({e}).\n"
+            "Lutfen jpg/png gibi bir FOTOGRAF sec, CSV/Excel degil."
+        )
+
+   
+    print(f"[OCR] Gorsel okunuyor: {image_path}")
+    reader = easyocr.Reader(["en", "tr"])
+    result = reader.readtext(image_path, detail=0, paragraph=True)
+    return " ".join(result)

@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+easyocr
+torch
+torchvision
+numpy
+pandas
+scikit-learn
+joblib
+opencv-python-headless
+python-multipart
+pillow

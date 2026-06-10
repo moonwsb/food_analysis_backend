@@ -78,7 +78,7 @@ def extract_text_from_image(image_path: str) -> str:
 
    
     print(f"[OCR] Gorsel okunuyor: {image_path}")
-    reader = easyocr.Reader(["en", "tr"])
+    reader = easyocr.Reader(["en"])
     result = reader.readtext(image_path, detail=0, paragraph=True)
     return " ".join(result)
 

@@ -297,3 +297,52 @@ def predict_diabetes(ocr_text: str, model):
         "aciklama": aciklama,
         "bulunanlar": sugar_hits
     }
+
+def predict_hybrid(ocr_text: str, model: Pipeline) -> None:
+    """Once kural, sonra modeli birlestiren hibrit karar."""
+    clean_input = clean_text(ocr_text)
+    if not clean_input:
+        print("UYARI: Gorselden hicbir yazi okunamadi. Daha net bir fotograf dene.")
+        return
+
+    # 1) Kural: glutensiz iddiasi var mi?
+    is_gf_claim = find_gluten_free_claim(ocr_text)
+
+    # 2) Kural: gluten kelimesi var mi?
+    keyword_hits = find_gluten_keywords(ocr_text)
+    rule_says_risky = len(keyword_hits) > 0
+
+    # 3) Model tahmini
+    model_pred = int(model.predict([clean_input])[0])
+    model_proba = model.predict_proba([clean_input])[0]
+
+    # ----- HIBRIT KARAR MANTIGI -----
+    # A) Acik "glutensiz" ifadesi varsa: model ne derse desin RISK YOK
+    #    (ANCAK: ayni etiketin baska yerinde "BUGDAY UNU" gibi acik bir
+    #     gluten kaynagi geciyorsa karari KARARSIZ yapariz)
+    if is_gf_claim and not rule_says_risky:
+        final_label = 0
+        reason = "Etiket 'glutensiz / gluten free' diyor ve gluten kaynagi gorulmedi."
+    elif is_gf_claim and rule_says_risky:
+        # Celiski: "glutensiz" yaziyor ama icindekilerde bugday/arpa vb. var
+        final_label = 1
+        reason = (
+            "Etikette 'glutensiz' yazsa da icindekilerde su gluten kaynaklari tespit "
+            f"edildi: {', '.join(keyword_hits)}. (OCR hatasi olabilir; etiketi kontrol et.)"
+        )
+    elif rule_says_risky:
+        final_label = 1
+        reason = f"Su gluten kaynaklari tespit edildi: {', '.join(keyword_hits)}"
+    else:
+        # Kural net bir sey demiyor: modele guven
+        final_label = model_pred
+        if model_pred == 1:
+            reason = "Kural sozluğu net bir gluten kaynagi bulamadi ama model riskli buluyor (su¨pheli kalip)."
+        else:
+            reason = "Hicbir gluten anahtar kelimesi bulunamadi, model risk gormuyor."
+
+    # Olasilik gosterimi
+    if final_label == 1:
+        risk_pct = max(model_proba[1] * 100, 95.0 if rule_says_risky else 0.0)
+    else:
+        risk_pct = (1 - model_proba[0]) * 100  # bilgi amacli

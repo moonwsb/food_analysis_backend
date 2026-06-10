@@ -299,7 +299,7 @@ def predict_diabetes(ocr_text: str, model):
     }
 
 # ============ HIBRIT KARAR ============
-def predict_hybrid(ocr_text: str, model: Pipeline) -> None:
+def predict_hybrid(ocr_text: str, model) -> None:
     """Once kural, sonra modeli birlestiren hibrit karar."""
     clean_input = clean_text(ocr_text)
     if not clean_input:

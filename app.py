@@ -19,3 +19,7 @@ def test():
 @app.get("/predict")
 def predict_test():
     return {"status": "working"}
+@app.get("/ocr-test")
+def ocr_test():
+    import easyocr
+    return {"easyocr": "import edildi"}

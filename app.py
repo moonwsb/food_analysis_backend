@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from PIL import Image
 import joblib
 import sys
 import easyocr
 import re
+import os
+import tempfile
 
 app = FastAPI()
 
@@ -20,9 +22,45 @@ def test():
         "celiac_model": "loaded",
         "diabetes_model": "loaded"
     }
-@app.get("/predict")
-def predict_test():
-    return {"status": "working"}
+@app.post("/predict")
+async def predict(
+    file: UploadFile = File(...),
+    analysis_type: str = Form(...)
+):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+
+    content = await file.read()
+    temp_file.write(content)
+    temp_file.close()
+
+    try:
+        ocr_text = extract_text_from_image(temp_file.name)
+
+        if analysis_type == "diabetes":
+            result = predict_diabetes(ocr_text, diabetes_model)
+
+        elif analysis_type == "both":
+            celiac_result = predict_hybrid(ocr_text, model)
+            diabetes_result = predict_diabetes(ocr_text, diabetes_model)
+
+            result = {
+                "sonuc": "BOTH",
+                "celiac_sonuc": celiac_result["sonuc"],
+                "celiac_aciklama": celiac_result["aciklama"],
+                "celiac_bulunanlar": celiac_result["bulunanlar"],
+                "diabetes_sonuc": diabetes_result["sonuc"],
+                "diabetes_aciklama": diabetes_result["aciklama"],
+                "diabetes_bulunanlar": diabetes_result["bulunanlar"],
+            }
+
+        else:
+            result = predict_hybrid(ocr_text, model)
+
+        return result
+
+    finally:
+        os.unlink(temp_file.name)
+
 @app.get("/ocr-test")
 def ocr_test():
 
